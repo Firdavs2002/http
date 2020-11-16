@@ -5,6 +5,10 @@ import (
 	"net/http"
 	"os"
 	"sync"
+
+	"github.com/Firdavs2002/http/pkg/banners"
+
+	"github.com/Firdavs2002/http/cmd/app"
 )
 
 func main() {
@@ -17,8 +21,9 @@ func main() {
 
 func execute(host string, port string) (err error) {
 	mux := http.NewServeMux()
-	server := app.NewServer(mux)
-
+	bannerSvc := banners.NewService()
+	server := app.NewServer(mux, bannerSvc)
+	server.Init()
 	srv := &http.Server{
 		Addr:    net.JoinHostPort(host, port),
 		Handler: mux,

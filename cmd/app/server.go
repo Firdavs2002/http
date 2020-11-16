@@ -5,6 +5,7 @@ import (
 	"log"
 	"net/http"
 	"strconv"
+	"strings"
 
 	"github.com/Firdavs2002/http/pkg/banners"
 )
@@ -83,7 +84,6 @@ func (s *Server) handleGetBannerByID(w http.ResponseWriter, r *http.Request) {
 
 	//получаем баннер из сервиса
 	banner, err := s.bannersSvc.ByID(r.Context(), id)
-
 	//если получили ошибку то отвечаем с ошибкой
 	if err != nil {
 		//печатаем ошибку
@@ -145,8 +145,20 @@ func (s *Server) handleSaveBanner(w http.ResponseWriter, r *http.Request) {
 		Link:    link,
 	}
 
+	file, fileHeader, err := r.FormFile("image")
+
+	//если нет ошибки значит файл пришел то берем его имя тоест расширения
+	if err == nil {
+		//Получаем расширеную файла например global.jpg берём только jpg а осталное будем генерироват  в сервисе
+		//здес разделяем имя файла по "."
+		var name = strings.Split(fileHeader.Filename, ".")
+		// берем последный элемент из массива тоест jpg и вставляем его в item.Image (в методе Save его будем менят)
+		item.Image = name[len(name)-1]
+
+	}
+
 	//вызываем метод Save тоест сохраняем или обновляем его
-	banner, err := s.bannersSvc.Save(r.Context(), item)
+	banner, err := s.bannersSvc.Save(r.Context(), item, file)
 
 	//если получили ошибку то отвечаем с ошибкой
 	if err != nil {

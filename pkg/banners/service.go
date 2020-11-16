@@ -3,6 +3,9 @@ package banners
 import (
 	"context"
 	"errors"
+	"fmt"
+	"io/ioutil"
+	"mime/multipart"
 	"sync"
 )
 
@@ -26,6 +29,8 @@ type Banner struct {
 	Link    string
 	Image   string
 }
+
+var sID int64 = 0
 
 // All возвращает все существующие баннеры.
 func (s *Service) All(ctx context.Context) ([]*Banner, error) {
@@ -52,17 +57,37 @@ func (s *Service) ByID(ctx context.Context, id int64) (*Banner, error) {
 }
 
 //Save сохраяет/обновляет баннер.
-func (s *Service) Save(ctx context.Context, item *Banner) (*Banner, error) {
+func (s *Service) Save(ctx context.Context, item *Banner, file multipart.File) (*Banner, error) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 
 	if item.ID == 0 {
-		item.ID++
+		sID++
+		item.ID = sID
+		if item.Image != "" {
+			item.Image = fmt.Sprint(item.ID) + "." + item.Image
+			err := uploadFile(file, "./web/banners/"+item.Image)
+			if err != nil {
+				return nil, err
+			}
+		}
+
 		s.items = append(s.items, item)
 		return item, nil
 	}
 	for k, v := range s.items {
 		if v.ID == item.ID {
+
+			if item.Image != "" {
+				item.Image = fmt.Sprint(item.ID) + "." + item.Image
+				err := uploadFile(file, "./web/banners/"+item.Image)
+				if err != nil {
+					return nil, err
+				}
+			} else {
+				item.Image = s.items[k].Image
+			}
+
 			s.items[k] = item
 			return item, nil
 		}
@@ -83,4 +108,19 @@ func (s *Service) RemoveByID(ctx context.Context, id int64) (*Banner, error) {
 	}
 
 	return nil, errors.New("item not found")
+}
+
+func uploadFile(file multipart.File, path string) error {
+	var data, err = ioutil.ReadAll(file)
+	if err != nil {
+		return errors.New("not readble data")
+	}
+
+	err = ioutil.WriteFile(path, data, 0666)
+
+	if err != nil {
+		return errors.New("not saved from folder ")
+	}
+
+	return nil
 }
